@@ -25,16 +25,37 @@ defmodule Ghash do
       iex> Ghash.encode 228644876657266
       "6gyf4bf8mk"
 
-      iex> Ghash.encode "6gyf4bf8mk"
+      iex> Ghash.encode -23.5505, -46.6333
+      "6gyf4bf8mk"
+
+      iex> Ghash.encode -23.5505, -46.6333, true
       228644876657266
 
   """
-  def encode lat, lon \\ 0 do
-    if is_bitstring lat do
-      String.codepoints(lat) |> encode_binary
-    else
-      encode_string lat
+  def encode lat, lon \\ 0, binary \\ false, depth \\ 50 do
+    cond do
+      is_integer lat ->
+        encode_string lat
+      is_float(lon) and binary ->
+        encode lat, lon, depth, -90.0, 90.0, -180.0, 180.0
+      is_float(lon) and !binary ->
+        encode(lat, lon, depth, -90.0, 90.0, -180.0, 180.0) |> encode_string
+      true ->
+        nil
     end
+  end
+
+  @doc """
+  Decode geohash
+
+  ## Examples
+
+      iex> Ghash.decode "6gyf4bf8mk"
+      228644876657266
+
+  """
+  def decode hash do
+    String.codepoints(hash) |> decode_binary
   end
 
   defp encode_string integer, string \\ []
@@ -48,12 +69,36 @@ defmodule Ghash do
     encode_string number >>> 5, [@b32[index] | string]
   end
 
-  defp encode_binary list, number \\ 0
-  defp encode_binary [single], number do
+  defp decode_binary list, number \\ 0
+  defp decode_binary [single], number do
     number ||| @b32[single]
   end
 
-  defp encode_binary [head | tail], number do
-    encode_binary tail, number ||| (@b32[head] <<< (length(tail) * 5))
+  defp decode_binary [head | tail], number do
+    decode_binary tail, number ||| (@b32[head] <<< (length(tail) * 5))
+  end
+
+  defp encode(
+    lat, lon, depth, la_min, la_max, lo_min, lo_max, total \\ 0, combined \\ 0, even \\ false
+  ) do
+    {lo_min, lo_max, la_min, la_max, combined} = if even do
+      if lat > (mid = (la_min + la_max) / 2) do
+        {lo_min, lo_max, mid, la_max, combined * 2 + 1}
+      else
+        {lo_min, lo_max, la_min, mid, combined * 2}
+      end
+    else
+      if lon > (mid = (lo_min + lo_max) / 2) do
+        {mid, lo_max, la_min, la_max, combined * 2 + 1}
+      else
+        {lo_min, mid, la_min, la_max, combined * 2}
+      end
+    end
+
+    if (total = total + 1) < depth do
+      encode lat, lon, depth, la_min, la_max, lo_min, lo_max, total, combined, !even
+    else
+      combined
+    end
   end
 end
