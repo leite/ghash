@@ -54,12 +54,28 @@ defmodule Ghash do
 
   ## Examples
 
-      iex> Ghash.decode "6gyf4bf8mk"
+      iex> Ghash.decode "6gyf4bf8mk", true
       228644876657266
 
+      iex> Ghash.decode "6gyf4bf8mk", 4
+      [-23.5505, -46.6333]
+
+      iex> Ghash.decode 228644876657266
+      [-23.550501, -46.633299]
+
+      iex> Ghash.decode "6gyf4bf8mk"
+      [-23.550501, -46.633299]
+
   """
-  def decode hash do
+  def decode hash, round \\ 6
+  def decode hash, true do
     String.codepoints(hash) |> decode_binary
+  end
+
+  def decode hash, round do
+    %{sw: [la_min, lo_min], ne: [la_max, lo_max]} = bounds hash
+
+    [Float.round((la_min + la_max) / 2, round), Float.round((lo_min + lo_max) / 2, round)]
   end
 
   @doc """
