@@ -68,11 +68,11 @@ defmodule Ghash do
 
   """
   def decode hash, round \\ 6
-  def decode hash, true do
+  def decode(hash, true) when is_bitstring hash do
     String.codepoints(hash) |> decode_binary
   end
 
-  def decode hash, round do
+  def decode(hash, round) when is_bitstring(hash) or is_integer(hash) do
     %{sw: [la_min, lo_min], ne: [la_max, lo_max]} = bounds hash
 
     [Float.round((la_min + la_max) / 2, round), Float.round((lo_min + lo_max) / 2, round)]
